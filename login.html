@@ -271,7 +271,7 @@
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const agentId = document.getElementById('agentId').value.trim().toUpperCase();
+      const agentId = document.getElementById('agentId').value.trim().toLowerCase();
       const password = document.getElementById('password').value.trim();
       const btn = document.getElementById('loginBtn');
       const errorEl = document.getElementById('errorMsg');
