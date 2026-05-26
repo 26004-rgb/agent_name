@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MISSION 01</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #080808;
+      color: #c8ffc8;
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      padding: 30px 20px 60px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,255,100,0.015) 2px, rgba(0,255,100,0.015) 4px
+      );
+      pointer-events: none; z-index: 10;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #1a3a1a;
+    }
+
+    .page-header .mission-label {
+      font-size: 10px;
+      letter-spacing: 6px;
+      color: #ff4444;
+      margin-bottom: 8px;
+    }
+
+    .page-header h1 {
+      font-size: 20px;
+      letter-spacing: 8px;
+      color: #e8ffe8;
+      text-shadow: 0 0 15px rgba(0,255,100,0.4);
+    }
+
+    .section {
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 5px;
+      color: #556655;
+      margin-bottom: 14px;
+    }
+
+    /* 브리핑 텍스트 */
+    .briefing {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      line-height: 1.9;
+      color: #99cc99;
+      border-left: 2px solid #1a4a1a;
+      padding-left: 16px;
+    }
+
+    /* GPS 상태 카드 */
+    .gps-card {
+      border: 1px solid #1a3a1a;
+      padding: 20px;
+      background: rgba(0,20,0,0.4);
+      margin-bottom: 20px;
+    }
+
+    .gps-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .gps-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #334433;
+      flex-shrink: 0;
+    }
+
+    .gps-dot.active { background: #00ff66; box-shadow: 0 0 8px #00ff66; animation: pulse 1.5s infinite; }
+    .gps-dot.error { background: #ff4444; }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; }
+      50% { opacity:0.4; }
+    }
+
+    .gps-text {
+      font-size: 12px;
+      color: #778877;
+      letter-spacing: 2px;
+    }
+
+    .coords-display {
+      font-size: 11px;
+      color: #445544;
+      letter-spacing: 1px;
+    }
+
+    /* 큐브 목록 */
+    .cube-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cube-item {
+      border: 1px solid #1a3a1a;
+      padding: 16px 20px;
+      background: rgba(0,15,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.3s;
+    }
+
+    .cube-item.near {
+      border-color: #ffaa00;
+      background: rgba(40,25,0,0.5);
+      animation: nearPulse 0.8s infinite alternate;
+    }
+
+    .cube-item.found {
+      border-color: #00ff66;
+      background: rgba(0,40,0,0.4);
+    }
+
+    @keyframes nearPulse {
+      from { box-shadow: none; }
+      to { box-shadow: 0 0 12px rgba(255,170,0,0.3); }
+    }
+
+    .cube-icon {
+      width: 36px; height: 36px;
+      border: 1px solid #1a4a1a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+
+    .cube-item.near .cube-icon { border-color: #ffaa00; }
+    .cube-item.found .cube-icon { border-color: #00ff66; background: rgba(0,255,100,0.1); }
+
+    .cube-info { flex: 1; }
+
+    .cube-name {
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #aaccaa;
+      margin-bottom: 4px;
+    }
+
+    .cube-item.found .cube-name { color: #00ff66; }
+
+    .cube-distance {
+      font-size: 11px;
+      color: #445544;
+      letter-spacing: 1px;
+    }
+
+    .cube-item.near .cube-distance { color: #ffaa00; }
+    .cube-item.found .cube-distance { color: #00cc44; }
+
+    .cube-status {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #334433;
+    }
+
+    .cube-item.near .cube-status { color: #ffaa00; }
+    .cube-item.found .cube-status { color: #00ff66; }
+
+    /* 프로그레스 */
+    .progress-bar {
+      height: 2px;
+      background: #1a2a1a;
+      margin: 16px 0 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, #004422, #00ff66);
+      transition: width 0.8s ease;
+    }
+
+    .progress-text {
+      font-size: 11px;
+      color: #445544;
+      letter-spacing: 2px;
+    }
+
+    /* 정답 입력 섹션 */
+    .answer-section {
+      border: 1px solid #1a3a1a;
+      padding: 24px;
+      background: rgba(0,15,0,0.5);
+    }
+
+    .answer-section.locked {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .answer-section .desc {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 13px;
+      color: #778877;
+      margin-bottom: 20px;
+      line-height: 1.8;
+    }
+
+    .answer-input-wrap {
+      display: flex;
+      gap: 10px;
+    }
+
+    .answer-input {
+      flex: 1;
+      background: #050f05;
+      border: 1px solid #1a3a1a;
+      border-bottom-color: #00ff6633;
+      color: #c8ffc8;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 18px;
+      padding: 12px 16px;
+      outline: none;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    .answer-input:focus { border-color: #00ff6666; }
+
+    .submit-btn {
+      padding: 12px 24px;
+      background: transparent;
+      border: 1px solid #00ff66;
+      color: #00ff66;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .submit-btn:hover { background: rgba(0,255,100,0.08); box-shadow: 0 0 12px rgba(0,255,100,0.2); }
+
+    .answer-result {
+      margin-top: 14px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      display: none;
+    }
+    .answer-result.ok { color: #00ff66; display: block; }
+    .answer-result.fail { color: #ff4444; display: block; }
+
+    /* 완료 오버레이 */
+    .cleared-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: #080808;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.8s;
+    }
+    .cleared-overlay.show { opacity:1; pointer-events:all; }
+
+    .cleared-text {
+      text-align: center;
+    }
+    .cleared-text .label { font-size:11px; letter-spacing:6px; color:#556655; margin-bottom:20px; }
+    .cleared-text h2 { font-size:26px; letter-spacing:8px; color:#00ff66; text-shadow: 0 0 30px rgba(0,255,100,0.8); margin-bottom:16px; }
+    .cleared-text .sub { font-size:12px; letter-spacing:4px; color:#557755; font-family:'Noto Sans KR',sans-serif; }
+
+    .proceed-btn {
+      margin-top: 40px;
+      padding: 14px 50px;
+      border: 1px solid #00ff66;
+      background: transparent;
+      color: #00ff66;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 5px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .proceed-btn:hover { background: rgba(0,255,100,0.08); }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <div class="mission-label">// MISSION 01 //</div>
+    <h1>큐브 회수 작전</h1>
+  </div>
+
+  <div class="section">
+    <div class="section-title">MISSION BRIEFING</div>
+    <div class="briefing">
+      조직의 마크가 새겨진 <strong style="color:#ccffcc">큐브 5개</strong>가 대치동 일대에 숨겨져 있습니다.<br>
+      큐브에 가까이 다가가면 신호를 감지합니다.<br>
+      모든 큐브를 회수하고, 각 큐브의 단서를 조합하여<br>
+      접근 코드를 도출하십시오.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">GPS SIGNAL</div>
+    <div class="gps-card">
+      <div class="gps-status">
+        <div class="gps-dot" id="gpsDot"></div>
+        <div class="gps-text" id="gpsText">위치 신호 초기화 중...</div>
+      </div>
+      <div class="coords-display" id="coordsDisplay">LAT: -- &nbsp;|&nbsp; LNG: --</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">CUBE TRACKER</div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="progress-text" id="progressText">0 / 5 회수됨</div>
+    <br>
+
+    <div class="cube-list" id="cubeList">
+      <!-- JS로 렌더링됨 -->
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">ACCESS CODE INPUT</div>
+    <div class="answer-section locked" id="answerSection">
+      <div class="desc">
+        5개의 큐브를 모두 회수한 후, 각 단서를 조합하여<br>
+        도출한 접근 코드를 입력하십시오.
+      </div>
+      <div class="answer-input-wrap">
+        <input type="text" class="answer-input" id="answerInput" placeholder="_ _ _ _ _" maxlength="20" autocomplete="off" spellcheck="false"/>
+        <button class="submit-btn" id="submitBtn">확인</button>
+      </div>
+      <div class="answer-result" id="answerResult"></div>
+    </div>
+  </div>
+
+  <!-- 클리어 오버레이 -->
+  <div class="cleared-overlay" id="clearedOverlay">
+    <div class="cleared-text">
+      <div class="label">// MISSION COMPLETE //</div>
+      <h2>임무 완료</h2>
+      <div class="sub">접근 코드 확인됨. 본부 연결 중...</div>
+    </div>
+    <a href="welcome.html" class="proceed-btn" id="proceedBtn">계속하기</a>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB2oyLYjYek0b2osLMy-0bYhcBBlNQL914",
+      authDomain: "agent-game-516d4.firebaseapp.com",
+      projectId: "agent-game-516d4",
+      storageBucket: "agent-game-516d4.firebasestorage.app",
+      messagingSenderId: "751449864751",
+      appId: "1:751449864751:web:d2cbdea0bb3dcf929864da"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ═══════════════════════════════════════════════════════
+    //  ★ 큐브 위치 설정 ★
+    //  실제 숨길 장소의 GPS 좌표로 바꿔줘!
+    //  구글 지도에서 원하는 위치 우클릭 → 좌표 복사
+    //  nearRadius: 몇 미터 안에 들어오면 "근처" 알림 (기본 30m)
+    // ═══════════════════════════════════════════════════════
+    const CUBES = [
+      { id: 1, name: "CUBE-01", lat: 37.4943, lng: 127.0636, nearRadius: 30 },
+      { id: 2, name: "CUBE-02", lat: 37.4955, lng: 127.0621, nearRadius: 30 },
+      { id: 3, name: "CUBE-03", lat: 37.4938, lng: 127.0650, nearRadius: 30 },
+      { id: 4, name: "CUBE-04", lat: 37.4960, lng: 127.0640, nearRadius: 30 },
+      { id: 5, name: "CUBE-05", lat: 37.4948, lng: 127.0628, nearRadius: 30 },
+    ];
+
+    // ═══════════════════════════════════════════════════════
+    //  ★ 정답 설정 ★
+    //  나중에 큐브 단서를 다 정하고 나서 여기에 입력해!
+    //  대소문자 구분 없이 체크함
+    // ═══════════════════════════════════════════════════════
+    const CORRECT_ANSWER = "ANSWER";  // ← 실제 정답으로 바꿔!
+
+    // ─── 상태 ───
+    let foundCubes = new Set();
+    let userLat = null, userLng = null;
+    let currentUid = null;
+
+    // ─── 로그인 확인 ───
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      currentUid = user.uid;
+
+      // Firestore에서 진행상황 불러오기
+      const progressDoc = await getDoc(doc(db, 'progress', currentUid));
+      if (progressDoc.exists()) {
+        const data = progressDoc.data();
+        if (data.stage1Cleared) {
+          window.location.href = 'welcome.html';
+          return;
+        }
+        if (data.foundCubes) {
+          data.foundCubes.forEach(id => foundCubes.add(id));
+        }
+      }
+
+      renderCubes();
+      startGPS();
+    });
+
+    // ─── 큐브 렌더링 ───
+    function renderCubes() {
+      const list = document.getElementById('cubeList');
+      list.innerHTML = CUBES.map(cube => {
+        const isFound = foundCubes.has(cube.id);
+        return `
+          <div class="cube-item ${isFound ? 'found' : ''}" id="cube-item-${cube.id}">
+            <div class="cube-icon" id="cube-icon-${cube.id}">${isFound ? '✓' : '□'}</div>
+            <div class="cube-info">
+              <div class="cube-name">${cube.name}</div>
+              <div class="cube-distance" id="cube-dist-${cube.id}">
+                ${isFound ? '회수 완료' : '신호 탐색 중...'}
+              </div>
+            </div>
+            <div class="cube-status" id="cube-status-${cube.id}">
+              ${isFound ? 'FOUND' : '---'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateProgress();
+    }
+
+    // ─── 진행도 업데이트 ───
+    function updateProgress() {
+      const count = foundCubes.size;
+      document.getElementById('progressFill').style.width = (count / 5 * 100) + '%';
+      document.getElementById('progressText').textContent = `${count} / 5 회수됨`;
+
+      if (count === 5) {
+        document.getElementById('answerSection').classList.remove('locked');
+      }
+    }
+
+    // ─── GPS 시작 ───
+    function startGPS() {
+      if (!navigator.geolocation) {
+        setGpsStatus('error', 'GPS를 지원하지 않는 기기입니다');
+        return;
+      }
+
+      setGpsStatus('searching', '위치 신호 탐색 중...');
+
+      navigator.geolocation.watchPosition(
+        onPositionUpdate,
+        onPositionError,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+      );
+    }
+
+    function setGpsStatus(state, text) {
+      const dot = document.getElementById('gpsDot');
+      const txt = document.getElementById('gpsText');
+      dot.className = 'gps-dot';
+      if (state === 'active') dot.classList.add('active');
+      if (state === 'error') dot.classList.add('error');
+      txt.textContent = text;
+    }
+
+    function onPositionUpdate(pos) {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      const acc = Math.round(pos.coords.accuracy);
+
+      setGpsStatus('active', `신호 확보 (정확도 ±${acc}m)`);
+      document.getElementById('coordsDisplay').textContent =
+        `LAT: ${userLat.toFixed(5)}  |  LNG: ${userLng.toFixed(5)}`;
+
+      checkProximity();
+    }
+
+    function onPositionError(err) {
+      setGpsStatus('error', 'GPS 오류: ' + err.message);
+    }
+
+    // ─── 근접 감지 ───
+    async function checkProximity() {
+      if (userLat === null) return;
+
+      let newFound = false;
+
+      for (const cube of CUBES) {
+        if (foundCubes.has(cube.id)) continue;
+
+        const dist = getDistance(userLat, userLng, cube.lat, cube.lng);
+        const distEl = document.getElementById(`cube-dist-${cube.id}`);
+        const itemEl = document.getElementById(`cube-item-${cube.id}`);
+        const statusEl = document.getElementById(`cube-status-${cube.id}`);
+
+        if (dist < cube.nearRadius) {
+          // 큐브 발견!
+          foundCubes.add(cube.id);
+          newFound = true;
+
+          itemEl.classList.remove('near');
+          itemEl.classList.add('found');
+          document.getElementById(`cube-icon-${cube.id}`).textContent = '✓';
+          distEl.textContent = '회수 완료';
+          statusEl.textContent = 'FOUND';
+
+          // 진동 피드백 (모바일)
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+          // Firestore 저장
+          if (currentUid) {
+            await setDoc(doc(db, 'progress', currentUid), {
+              foundCubes: Array.from(foundCubes)
+            }, { merge: true });
+          }
+
+        } else if (dist < cube.nearRadius * 5) {
+          // 근처 (반경 5배 안)
+          itemEl.classList.add('near');
+          distEl.textContent = `${Math.round(dist)}m 거리`;
+          statusEl.textContent = 'NEAR';
+
+        } else {
+          // 멀리
+          itemEl.classList.remove('near');
+          distEl.textContent = `${Math.round(dist)}m 거리`;
+          statusEl.textContent = '---';
+        }
+      }
+
+      if (newFound) updateProgress();
+    }
+
+    // ─── Haversine 거리 계산 (미터) ───
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2
+              + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // ─── 정답 확인 ───
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const answer = document.getElementById('answerInput').value.trim().toUpperCase();
+      const resultEl = document.getElementById('answerResult');
+
+      if (!answer) return;
+
+      if (answer === CORRECT_ANSWER.toUpperCase()) {
+        resultEl.className = 'answer-result ok';
+        resultEl.textContent = '✓ 접근 코드 확인됨. 시스템 연결 중...';
+
+        // Firestore에 1단계 클리어 저장
+        if (currentUid) {
+          await setDoc(doc(db, 'progress', currentUid), {
+            stage1Cleared: true,
+            stage1ClearedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
+        setTimeout(() => {
+          document.getElementById('clearedOverlay').classList.add('show');
+        }, 1200);
+
+      } else {
+        resultEl.className = 'answer-result fail';
+        resultEl.textContent = '✗ 접근 거부. 단서를 다시 확인하십시오.';
+        document.getElementById('answerInput').value = '';
+      }
+    });
+
+    // 엔터키로도 제출
+    document.getElementById('answerInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('submitBtn').click();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>환영합니다</title>
+  <!-- Leaflet.js 지도 라이브러리 (무료/오픈소스) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #080808;
+      color: #c8ffc8;
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,255,100,0.015) 2px, rgba(0,255,100,0.015) 4px
+      );
+      pointer-events: none; z-index: 10;
+    }
+
+    /* ─── 인트로 오버레이 ─── */
+    .intro-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #080808;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: opacity 1s ease;
+    }
+
+    .intro-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro-lines {
+      text-align: center;
+      position: relative;
+    }
+
+    .intro-line {
+      font-size: clamp(14px, 3vw, 20px);
+      letter-spacing: 6px;
+      color: #00ff66;
+      text-shadow: 0 0 20px rgba(0,255,100,0.8);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.6s ease;
+      margin-bottom: 12px;
+    }
+
+    .intro-line.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .intro-line .dashes {
+      color: #334433;
+    }
+
+    .intro-line.agent-name {
+      font-size: clamp(18px, 4vw, 28px);
+      color: #ccffcc;
+      letter-spacing: 8px;
+    }
+
+    /* ─── 메인 콘텐츠 ─── */
+    .main-content {
+      opacity: 0;
+      transition: opacity 1s ease;
+      padding-bottom: 60px;
+    }
+
+    .main-content.visible { opacity: 1; }
+
+    .top-bar {
+      padding: 20px 24px;
+      border-bottom: 1px solid #1a3a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 5;
+    }
+
+    .top-bar .title {
+      font-size: 13px;
+      letter-spacing: 5px;
+      color: #557755;
+    }
+
+    .top-bar .agent-badge {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #00ff66;
+      border: 1px solid #00ff6633;
+      padding: 4px 12px;
+    }
+
+    .content-wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+
+    .welcome-msg {
+      margin-bottom: 36px;
+      padding: 24px;
+      border: 1px solid #1a4a1a;
+      background: rgba(0,30,0,0.4);
+      position: relative;
+    }
+
+    .welcome-msg::before, .welcome-msg::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      border-color: #00ff66; border-style: solid;
+    }
+    .welcome-msg::before { top:-1px; left:-1px; border-width: 2px 0 0 2px; }
+    .welcome-msg::after  { bottom:-1px; right:-1px; border-width: 0 2px 2px 0; }
+
+    .welcome-msg h2 {
+      font-size: 16px;
+      letter-spacing: 4px;
+      color: #00ff66;
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(0,255,100,0.4);
+    }
+
+    .welcome-msg p {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      line-height: 2;
+      color: #99cc99;
+    }
+
+    .welcome-msg .highlight { color: #ccffcc; font-weight: 700; }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 5px;
+      color: #556655;
+      margin-bottom: 14px;
+    }
+
+    /* ─── 지도 ─── */
+    .map-container {
+      border: 1px solid #1a3a1a;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #map {
+      height: 420px;
+      background: #0a0a0a;
+      filter: saturate(0.3) brightness(0.7);
+    }
+
+    .map-legend {
+      display: flex;
+      gap: 20px;
+      padding: 12px 16px;
+      background: rgba(0,10,0,0.8);
+      border-top: 1px solid #1a3a1a;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #778877;
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ─── 다음 미션 안내 ─── */
+    .next-section {
+      margin-top: 30px;
+      border: 1px solid #3a2a0a;
+      padding: 24px;
+      background: rgba(20,15,0,0.4);
+    }
+
+    .next-section .label {
+      font-size: 10px;
+      letter-spacing: 5px;
+      color: #665533;
+      margin-bottom: 12px;
+    }
+
+    .next-section p {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 13px;
+      color: #887755;
+      line-height: 1.9;
+    }
+
+    .blink { animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* Leaflet 마커 커스텀 */
+    .custom-marker {
+      background: none;
+      border: none;
+    }
+
+    .marker-inner {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 인트로 오버레이 -->
+  <div class="intro-overlay" id="introOverlay">
+    <div class="intro-lines">
+      <div class="intro-line" id="line1"><span class="dashes">---</span> 요원님, 환영합니다. <span class="dashes">---</span></div>
+      <div class="intro-line agent-name" id="line2" style="margin-top:20px;"></div>
+      <div class="intro-line" id="line3" style="font-size:12px; color:#557755; margin-top:30px;">시스템 연결 완료. 지도 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
+  <div class="main-content" id="mainContent">
+    <div class="top-bar">
+      <div class="title">OPERATION HQ</div>
+      <div class="agent-badge" id="agentBadge">AGENT</div>
+    </div>
+
+    <div class="content-wrap">
+      <div class="welcome-msg">
+        <h2>임무 현황</h2>
+        <p>
+          큐브 회수 완료. 신원 확인됨.<br>
+          본부와의 연결이 수립되었습니다.<br><br>
+          최종 목표: <span class="highlight">대치동 내 '빨간 버섯 인형' 회수</span><br>
+          작전 구역이 지도에 표시됩니다.
+        </p>
+      </div>
+
+      <div class="section-title">OPERATION MAP</div>
+      <div class="map-container">
+        <div id="map"></div>
+        <div class="map-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#00ff66;"></div>
+            <span>대치동 작전 구역</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#4499ff;"></div>
+            <span>SSHS 기지</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#ff4444;"></div>
+            <span>최종 목표 구역</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="next-section">
+        <div class="label blink">// INCOMING TRANSMISSION //</div>
+        <p>
+          추가 지령을 대기하십시오.<br>
+          곧 각 요원에게 개별 미션이 전달될 것입니다.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB2oyLYjYek0b2osLMy-0bYhcBBlNQL914",
+      authDomain: "agent-game-516d4.firebaseapp.com",
+      projectId: "agent-game-516d4",
+      storageBucket: "agent-game-516d4.firebasestorage.app",
+      messagingSenderId: "751449864751",
+      appId: "1:751449864751:web:d2cbdea0bb3dcf929864da"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 요원 이메일 → 코드네임 역매핑
+    const EMAIL_TO_AGENT = {
+      "agent01@op.game": "AGENT-01",
+      "agent02@op.game": "AGENT-02",
+      "agent03@op.game": "AGENT-03",
+      "agent04@op.game": "AGENT-04",
+      "agent05@op.game": "AGENT-05",
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const agentName = EMAIL_TO_AGENT[user.email] || 'AGENT';
+      document.getElementById('agentBadge').textContent = agentName;
+      document.getElementById('line2').textContent = agentName;
+
+      // 인트로 애니메이션
+      runIntro(agentName, () => {
+        initMap();
+      });
+    });
+
+    // ─── 인트로 시퀀스 ───
+    function runIntro(name, callback) {
+      const lines = ['line1', 'line2', 'line3'];
+
+      setTimeout(() => document.getElementById('line1').classList.add('visible'), 300);
+      setTimeout(() => document.getElementById('line2').classList.add('visible'), 1000);
+      setTimeout(() => document.getElementById('line3').classList.add('visible'), 1800);
+
+      setTimeout(() => {
+        document.getElementById('introOverlay').classList.add('fade-out');
+        document.getElementById('mainContent').classList.add('visible');
+        setTimeout(callback, 500);
+      }, 3200);
+    }
+
+    // ─── 지도 초기화 ───
+    function initMap() {
+      // 대치동과 sshs 중간 지점으로 초기 뷰
+      const map = L.map('map', {
+        center: [37.548, 127.012],
+        zoom: 12,
+        zoomControl: true,
+      });
+
+      // 다크 테마 타일 (CartoDB Dark Matter - 무료)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap contributors © CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+
+      // ── 대치동 작전 구역 마커 ──
+      const dachiIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#00ff66;box-shadow:0 0 12px #00ff66;border:2px solid #ccffcc;"></div>',
+        iconAnchor: [7, 7]
+      });
+
+      L.marker([37.4943, 127.0636], { icon: dachiIcon })
+        .addTo(map)
+        .bindPopup('<div style="background:#0a0a0a;color:#00ff66;font-family:monospace;padding:8px 12px;border:1px solid #1a4a1a;font-size:12px;letter-spacing:2px;">대치동 작전 구역</div>');
+
+      // 대치동 반경 표시
+      L.circle([37.4943, 127.0636], {
+        radius: 600,
+        color: '#00ff6633',
+        fillColor: '#00ff6608',
+        fillOpacity: 1,
+        weight: 1
+      }).addTo(map);
+
+      // ── SSHS 마커 ──
+      const sshsIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#4499ff;box-shadow:0 0 12px #4499ff;border:2px solid #aaccff;"></div>',
+        iconAnchor: [7, 7]
+      });
+
+      L.marker([37.6023, 126.9608], { icon: sshsIcon })
+        .addTo(map)
+        .bindPopup('<div style="background:#0a0a0a;color:#4499ff;font-family:monospace;padding:8px 12px;border:1px solid #1a2a4a;font-size:12px;letter-spacing:2px;">SSHS 기지</div>');
+
+      // ── 최종 목표 (빨간 버섯 인형 위치 - 나중에 실제 위치로 바꿔!) ──
+      const targetIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="width:18px;height:18px;border-radius:50%;background:#ff4444;box-shadow:0 0 16px #ff4444;border:2px solid #ffaaaa;animation:targetPulse 1s infinite alternate;" id="target-dot"></div>',
+        iconAnchor: [9, 9]
+      });
+
+      // ★ 빨간 버섯 인형의 실제 위치로 나중에 바꿔!
+      L.marker([37.4950, 127.0630], { icon: targetIcon })
+        .addTo(map)
+        .bindPopup('<div style="background:#0a0a0a;color:#ff4444;font-family:monospace;padding:8px 12px;border:1px solid #4a1a1a;font-size:12px;letter-spacing:2px;">최종 목표 구역<br><span style="color:#664444;font-size:10px;">상세 위치 미확인</span></div>');
+
+      // 두 지점을 잇는 선
+      L.polyline(
+        [[37.4943, 127.0636], [37.6023, 126.9608]],
+        { color: '#33ff6622', weight: 1, dashArray: '6, 8' }
+      ).addTo(map);
+    }
+  </script>
+
+  <style>
+    /* Leaflet 팝업 다크 테마 */
+    .leaflet-popup-content-wrapper {
+      background: #0a0a0a !important;
+      border: 1px solid #1a3a1a !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .leaflet-popup-tip { background: #0a0a0a !important; }
+    .leaflet-popup-content { margin: 0 !important; }
+  </style>
+
+</body>
+</html>
